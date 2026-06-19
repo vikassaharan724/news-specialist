@@ -1,0 +1,21 @@
+{
+  "name": "news-specialist",
+  "version": "1.0.0",
+  "description": "News specialist agent API — calls news-mcp on Render",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.1.48",
+    "@langchain/langgraph": "^1.3.2",
+    "@langchain/mcp-adapters": "^1.1.3",
+    "@langchain/openai": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.1.0",
+    "langchain": "^1.4.2"
+  }
+}
