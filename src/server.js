@@ -6,8 +6,13 @@ import { initAgent, runAgent } from "./agent.js";
 import { closeMcpClient } from "./mcp.js";
 
 const app = express();
-app.use(express.json());
-app.use(cors({ origin: true }));
+app.use(express.json({ limit: "1mb" }));
+app.use(
+  cors({
+    origin: config.corsOrigins.includes("*") ? true : config.corsOrigins,
+    methods: ["GET", "POST", "OPTIONS"],
+  })
+);
 
 function requireApiKey(req, res, next) {
   if (!config.apiKey) return next();
