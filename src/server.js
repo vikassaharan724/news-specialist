@@ -14,6 +14,9 @@ app.use(
   })
 );
 
+let agentReady = false;
+let agentError = null;
+
 function requireApiKey(req, res, next) {
   if (!config.apiKey) return next();
   if (req.headers["x-api-key"] !== config.apiKey) {
@@ -23,10 +26,22 @@ function requireApiKey(req, res, next) {
 }
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, service: config.serviceName, mcpUrl: config.mcpUrl });
+  res.json({
+    ok: agentReady,
+    service: config.serviceName,
+    mcpUrl: config.mcpUrl,
+    agentReady,
+    ...(agentError ? { error: agentError } : {}),
+  });
 });
 
 app.post("/v1/chat", requireApiKey, async (req, res) => {
+  if (!agentReady) {
+    return res.status(503).json({
+      error: "Agent still starting (connecting to news-mcp). Retry in 30–60s.",
+      detail: agentError,
+    });
+  }
   try {
     const message = String(req.body?.message ?? "").trim();
     if (!message) return res.status(400).json({ error: "message is required" });
@@ -38,10 +53,26 @@ app.post("/v1/chat", requireApiKey, async (req, res) => {
   }
 });
 
-await initAgent();
-app.listen(config.port, () => console.log(`${config.serviceName} on port ${config.port}`));
+const server = app.listen(config.port, () => {
+  console.log(`${config.serviceName} listening on port ${config.port}`);
+});
 
-process.on("SIGTERM", async () => {
+initAgent()
+  .then(() => {
+    agentReady = true;
+    agentError = null;
+    console.log(`${config.serviceName} agent ready`);
+  })
+  .catch((err) => {
+    agentError = err.message;
+    console.error(`${config.serviceName} agent init failed:`, err);
+  });
+
+async function shutdown() {
+  server.close();
   await closeMcpClient();
   process.exit(0);
-});
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
